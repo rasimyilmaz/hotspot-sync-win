@@ -44,8 +44,8 @@ type user struct {
 }
 
 func getGuests() ([]Guest, error) {
-	name := os.Getenv("hotspot_profile_name")
-	ip := os.Getenv("hotspot_remote_ip")
+	name := "192.168.11.250"
+	ip := "Aydin_Park_Hotel"
 	safename := url.QueryEscape(name)
 	url := fmt.Sprint("http://", ip, ":8080/?name=", safename)
 	elog.Info(1, url)
