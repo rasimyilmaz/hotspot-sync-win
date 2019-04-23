@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sys/windows/svc/eventlog"
 	"gopkg.in/routeros.v2"
 )
 
@@ -143,6 +144,14 @@ func createHotspotUsers(users []user) error {
 	return nil
 }
 func start() {
+	const name = "hotspot-sync-win"
+
+	elog, err := eventlog.Open(name)
+	if err != nil {
+		return
+	}
+	defer elog.Close()
+
 	dir, err := os.Getwd()
 	if err != nil {
 		return
@@ -154,7 +163,7 @@ func start() {
 	filename := fmt.Sprint(dir, separator, "hotspot-sync.log")
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		elog.Info(1, fmt.Sprintf("error opening file: %v", err))
 	}
 	defer f.Close()
 	log.SetOutput(f)
@@ -162,15 +171,15 @@ func start() {
 		log.Printf("Sync started...")
 		guests, err := getGuests()
 		if err == nil {
-			log.Println("Number of guests = ", len(guests))
+			elog.Info(1, fmt.Sprintf("Number of guests = %d", len(guests)))
 		} else {
-			log.Println("Connection fail.\nCould get data from hotel api server.")
+			elog.Info(1, "Connection fail.\nCould get data from hotel api server.")
 			time.Sleep(*interval)
 			continue
 		}
 		users, err := getHotspotUsers()
 		if err == nil {
-			log.Println("Number of hotspot users = ", len(users))
+			elog.Info(1, fmt.Sprintf("Number of hotspot users = %d", len(users)))
 		}
 		var deletelist []user
 		var delete bool
@@ -195,12 +204,12 @@ func start() {
 		for _, iguest := range guests {
 			createlist = append(createlist, user{name: iguest.ID, password: strconv.Itoa(iguest.BirthYear), comment: iguest.Name + " Check in & out date: " + iguest.CheckInDate.Format("Jan-02-2006") + " - " + iguest.CheckOutDate.Format("Jan-02-2006"), profile: "uprof_customer"})
 		}
-		log.Printf("How many hotspot users need to be delete ? : %d\n", len(deletelist))
+		elog.Info(1, fmt.Sprintf("How many hotspot users need to be delete ? : %d\n", len(deletelist)))
 		for _, row := range deletelist {
 			log.Printf("Comment\t,Id\n")
 			log.Printf("%s\t%s\n", row.comment, row.name)
 		}
-		log.Printf("How many hotspot users need to be inserted ? : %d\n", len(createlist))
+		elog.Info(1, fmt.Sprintf("How many hotspot users need to be inserted ? : %d\n", len(createlist)))
 		for _, row := range createlist {
 			log.Printf("Comment\t,Id\n")
 			log.Printf("%s\t%s\n", row.comment, row.name)
