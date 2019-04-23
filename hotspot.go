@@ -48,7 +48,7 @@ func getGuests() ([]Guest, error) {
 	ip := os.Getenv("hotspot_remote_ip")
 	safename := url.QueryEscape(name)
 	url := fmt.Sprint("http://", ip, ":8080/?name=", safename)
-
+	elog.Info(1, url)
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -173,7 +173,7 @@ func start() {
 		if err == nil {
 			elog.Info(1, fmt.Sprintf("Number of guests = %d", len(guests)))
 		} else {
-			elog.Info(1, fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%v", err))
+			elog.Info(1, fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%s", err.Error()))
 			time.Sleep(*interval)
 			continue
 		}
