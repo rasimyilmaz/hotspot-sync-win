@@ -173,7 +173,7 @@ func start() {
 		if err == nil {
 			elog.Info(1, fmt.Sprintf("Number of guests = %d", len(guests)))
 		} else {
-			elog.Info(1, "Connection fail.\nCould get data from hotel api server.%v", err)
+			elog.Info(1, fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%v", err))
 			time.Sleep(*interval)
 			continue
 		}
