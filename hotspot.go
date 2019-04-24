@@ -4,25 +4,26 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-	"io/ioutil"
+	
 	"golang.org/x/sys/windows/svc/eventlog"
 	"gopkg.in/routeros.v2"
 )
 
 var (
-	address    = flag.String("address", "192.168.11.1:8728", "Address")
-	username   = flag.String("username", "admin", "Username")
-	password   = flag.String("password", "78758", "Password")
-	properties = flag.String("properties", "name", "Properties")
-	interval   = flag.Duration("interval", 1*time.Minute, "Interval")
+	address         = flag.String("address", "192.168.11.1:8728", "Address")
+	username        = flag.String("username", "admin", "Username")
+	password        = flag.String("password", "78758", "Password")
+	properties      = flag.String("properties", "name", "Properties")
+	interval        = flag.Duration("interval", 1*time.Minute, "Interval")
 	settingFilename string
 )
 
@@ -43,24 +44,25 @@ type user struct {
 	comment  string
 	profile  string
 }
-//Setting for application settings 
+
+//Setting for application settings
 type Setting struct {
-	Profile	string `json: "Profile"`
-	IP		string `json: "IP"`
+	Profile string `json: "Profile"`
+	IP      string `json: "IP"`
 }
 
 func getGuests() ([]Guest, error) {
 	file, err := ioutil.ReadFile(settingFilename)
 	data := Setting{}
 	err = json.Unmarshal([]byte(file), &data)
-	if (err!=nil ){
-		elog.Info(1,err.Error())
+	if err != nil {
+		elog.Info(1, err.Error())
 	}
 	name := data.Profile
 	ip := data.IP
 	safename := url.QueryEscape(name)
 	url := fmt.Sprint("http://", ip, ":8080/?name=", safename)
-	elog.Info(1, url + " " + settingFilename)
+	elog.Info(1, url+" "+settingFilename)
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -164,12 +166,15 @@ func start() {
 	}
 	defer elog.Close()
 
-	dir, err := os.Getwd()
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
 	if err != nil {
 		return
 	}
-	logFilename := path.Join(dir, "hotspot-sync.log")
-	settingFilename = path.Join(dir, "setting.json")
+	logFilename := filepath.Join(dir, "hotspot-sync.log")
+	settingFilename = filepath.Join(dir, "setting.json")
 	f, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		elog.Info(1, fmt.Sprintf("error opening file: %v", err))
