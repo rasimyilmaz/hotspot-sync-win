@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"runtime"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +23,7 @@ var (
 	password   = flag.String("password", "78758", "Password")
 	properties = flag.String("properties", "name", "Properties")
 	interval   = flag.Duration("interval", 1*time.Minute, "Interval")
+	settingFilename string
 )
 
 //Guest is defined in house people in hotel
@@ -49,15 +50,17 @@ type Setting struct {
 }
 
 func getGuests() ([]Guest, error) {
-	file, _ := ioutil.ReadFile("setting.json")
+	file, err := ioutil.ReadFile(settingFilename)
 	data := Setting{}
-	_ = json.Unmarshal([]byte(file), &data)
-
+	err = json.Unmarshal([]byte(file), &data)
+	if (err!=nil ){
+		elog.Info(1,err.Error())
+	}
 	name := data.Profile
 	ip := data.IP
 	safename := url.QueryEscape(name)
 	url := fmt.Sprint("http://", ip, ":8080/?name=", safename)
-	elog.Info(1, url)
+	elog.Info(1, url + " " + settingFilename)
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -165,12 +168,9 @@ func start() {
 	if err != nil {
 		return
 	}
-	separator := "/"
-	if runtime.GOOS == "windows" {
-		separator = "\\"
-	}
-	filename := fmt.Sprint(dir, separator, "hotspot-sync.log")
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logFilename := path.Join(dir, "hotspot-sync.log")
+	settingFilename = path.Join(dir, "setting.json")
+	f, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		elog.Info(1, fmt.Sprintf("error opening file: %v", err))
 	}
