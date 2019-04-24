@@ -21,7 +21,7 @@ func usage(errmsg string) {
 
 //main start
 func main() {
-	const svcName = "hotspot-sync-win"
+	const svcName = "HotspotSyncWin"
 
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"io/ioutil"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"gopkg.in/routeros.v2"
 )
@@ -42,10 +42,19 @@ type user struct {
 	comment  string
 	profile  string
 }
+//Setting for application settings 
+type Setting struct {
+	Profile	string `json: "Profile"`
+	IP		string `json: "IP"`
+}
 
 func getGuests() ([]Guest, error) {
-	name := "192.168.11.250"
-	ip := "Aydin_Park_Hotel"
+	file, _ := ioutil.ReadFile("setting.json")
+	data := Setting{}
+	_ = json.Unmarshal([]byte(file), &data)
+
+	name := data.Profile
+	ip := data.IP
 	safename := url.QueryEscape(name)
 	url := fmt.Sprint("http://", ip, ":8080/?name=", safename)
 	elog.Info(1, url)
@@ -144,7 +153,7 @@ func createHotspotUsers(users []user) error {
 	return nil
 }
 func start() {
-	const name = "hotspot-sync-win"
+	const name = "HotspotSyncWin"
 
 	elog, err := eventlog.Open(name)
 	if err != nil {
