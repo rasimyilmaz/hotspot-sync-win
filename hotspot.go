@@ -48,17 +48,16 @@ type Configuration struct {
 
 //Setting for application settings
 type Setting struct {
+	ServerAddress       string `json: "ServerAddress"`
 	Profile             string `json: "Profile"`
-	IP                  string `json: "IP"`
-	MikrotikIP          string `json:"MikrotikIP"`
-	MikrotikPort		int    `json:"MikrotikPort"`
+	MikrotikAddress     string `json:"MikrotikAddress"`
 	MikrotikUsername    string `json:"MikrotikUsername"`
 	MikrotikPassword    string `json:"MikrotikPassword"`
 	CustomerProfileName string `json:"CustomerProfileName"`
 }
 
 func getGuests(item Setting) ([]Guest, error) {
-	url := fmt.Sprint("http://", item.IP, ":8080/?name=", item.Profile)
+	url := fmt.Sprint("http://", item.ServerAddress, "/?name=", item.Profile)
 	elog.Info(1, url+" "+settingFilename)
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
@@ -99,9 +98,8 @@ func getGuests(item Setting) ([]Guest, error) {
 func getHotspotUsers(item Setting) ([]user, error) {
 	flag.Parse()
 	var users []user
-	c, err := routeros.Dial(item.MikrotikIP+":"+string(item.MikrotikPort), item.MikrotikUsername, item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikAddress, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
-		log.Print(err)
 		return nil, err
 	}
 	reply, err := c.Run("/ip/hotspot/user/print", "?profile="+item.CustomerProfileName)
@@ -124,15 +122,13 @@ func Atol(word string) string {
 }
 func deleteHotspotUsers(item Setting, users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(item.MikrotikIP+":"+string(item.MikrotikPort), item.MikrotikUsername, item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikAddress, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
-		log.Print(err.Error())
 		return err
 	}
 	for _, row := range users {
 		_, err := c.Run("/ip/hotspot/user/remove", "=.id="+row.id)
 		if err != nil {
-			log.Print(err.Error())
 			return err
 		}
 	}
@@ -140,15 +136,13 @@ func deleteHotspotUsers(item Setting, users []user) error {
 }
 func createHotspotUsers(item Setting, users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(item.MikrotikIP+":"+string(item.MikrotikPort), item.MikrotikUsername, item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikAddress, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
-		log.Print(err.Error())
 		return err
 	}
 	for _, row := range users {
 		_, err := c.Run("/ip/hotspot/user/add", "=name="+row.name, "=password="+row.password, "=comment="+Atol(row.comment), "=profile="+row.profile)
 		if err != nil {
-			log.Print(err.Error())
 			return err
 		}
 	}
