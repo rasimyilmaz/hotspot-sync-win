@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	
+
 	"golang.org/x/sys/windows/svc/eventlog"
 	"gopkg.in/routeros.v2"
 )
@@ -20,8 +20,8 @@ import (
 var (
 	properties      = flag.String("properties", "name", "Properties")
 	settingFilename string
-	interval = time.Minute
-	config Configuration
+	interval        = time.Minute
+	config          Configuration
 )
 
 //Guest is defined in house people in hotel
@@ -43,18 +43,16 @@ type user struct {
 }
 type Configuration struct {
 	Settings []Setting `json: "Settings"`
-	Interval int `json: "Interval"`
+	Interval int       `json: "Interval"`
 }
 
 //Setting for application settings
 type Setting struct {
-	ID int	`json: "ID"`
-	Name string `json: "Name"`
-	Profile string `json: "Profile"`
-	IP	string `json: "IP"`
-	MikrotikIP string `json:"MikrotikIP"`
-	MikrotikUsername string `json:"MikrotikUsername"`
-	MikrotikPassword string `json:"MikrotikPassword"`
+	Profile             string `json: "Profile"`
+	IP                  string `json: "IP"`
+	MikrotikIP          string `json:"MikrotikIP"`
+	MikrotikUsername    string `json:"MikrotikUsername"`
+	MikrotikPassword    string `json:"MikrotikPassword"`
 	CustomerProfileName string `json:"CustomerProfileName"`
 }
 
@@ -100,7 +98,7 @@ func getGuests(item Setting) ([]Guest, error) {
 func getHotspotUsers(item Setting) ([]user, error) {
 	flag.Parse()
 	var users []user
-	c, err := routeros.Dial(item.MikrotikIP,item.MikrotikUsername , item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -123,7 +121,7 @@ func Atol(word string) string {
 	var replacer = strings.NewReplacer("İ", "I", "Ü", "U", "Ğ", "G", "Ş", "S", "Ö", "O", "Ç", "C")
 	return replacer.Replace(word)
 }
-func deleteHotspotUsers(item Setting,users []user) error {
+func deleteHotspotUsers(item Setting, users []user) error {
 	flag.Parse()
 	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
@@ -139,9 +137,9 @@ func deleteHotspotUsers(item Setting,users []user) error {
 	}
 	return nil
 }
-func createHotspotUsers(item Setting,users []user) error {
+func createHotspotUsers(item Setting, users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername,item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
 		log.Print(err.Error())
 		return err
@@ -180,21 +178,21 @@ func start() {
 	defer f.Close()
 	log.SetOutput(f)
 	for {
-		elog.Info(1,"Sync started.Interval "+interval.String() + " minutes.")
+		elog.Info(1, "Sync started.Interval "+interval.String()+" minutes.")
 		log.Printf("Sync started...")
 		time.Sleep(interval)
 		file, err := ioutil.ReadFile(settingFilename)
-		if (err!=nil){
+		if err != nil {
 			log.Printf(err.Error())
 			continue
 		}
 		err = json.Unmarshal([]byte(file), &config)
-		if (err!=nil){
+		if err != nil {
 			log.Printf(err.Error())
 			continue
 		}
-		interval = time.Duration(config.Interval)*time.Minute
-		for _,item :=range config.Settings {
+		interval = time.Duration(config.Interval) * time.Minute
+		for _, item := range config.Settings {
 			guests, err := getGuests(item)
 			if err == nil {
 				log.Printf(fmt.Sprintf("Number of guests = %d", len(guests)))
@@ -237,8 +235,8 @@ func start() {
 				log.Printf("Comment\t,Id\n")
 				log.Printf("%s\t%s\n", row.comment, row.name)
 			}
-			deleteHotspotUsers(item,deletelist)
-			createHotspotUsers(item,createlist)
+			deleteHotspotUsers(item, deletelist)
+			createHotspotUsers(item, createlist)
 		}
 	}
 }
