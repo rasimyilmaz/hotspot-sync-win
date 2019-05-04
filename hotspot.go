@@ -19,12 +19,9 @@ import (
 )
 
 var (
-	address         = flag.String("address", "192.168.11.1:8728", "Address")
-	username        = flag.String("username", "admin", "Username")
-	password        = flag.String("password", "78758", "Password")
 	properties      = flag.String("properties", "name", "Properties")
-	interval        = flag.Duration("interval", 1*time.Minute, "Interval")
 	settingFilename string
+	config Configuration
 )
 
 //Guest is defined in house people in hotel
@@ -44,24 +41,25 @@ type user struct {
 	comment  string
 	profile  string
 }
+type Configuration struct {
+	Settings []Setting `json: "Settings"`
+	Interval int `json: "Interval"`
+}
 
 //Setting for application settings
 type Setting struct {
+	ID int	`json: "ID"`
+	Name string `json: "Name"`
 	Profile string `json: "Profile"`
-	IP      string `json: "IP"`
+	IP	string `json: "IP"`
+	MikrotikIP string `json:"MikrotikIP"`
+	MikrotikUsername string `json:"MikrotikUsername"`
+	MikrotikPassword string `json:"MikrotikPassword"`
+	CustomerProfileName string `json:"CustomerProfileName"`
 }
 
-func getGuests() ([]Guest, error) {
-	file, err := ioutil.ReadFile(settingFilename)
-	data := Setting{}
-	err = json.Unmarshal([]byte(file), &data)
-	if err != nil {
-		elog.Info(1, err.Error())
-	}
-	name := data.Profile
-	ip := data.IP
-	safename := url.QueryEscape(name)
-	url := fmt.Sprint("http://", ip, ":8080/?name=", safename)
+func getGuests(item Setting) ([]Guest, error) {
+	url := fmt.Sprint("http://", item.IP, ":8080/?name=", item.Profile)
 	elog.Info(1, url+" "+settingFilename)
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
@@ -99,10 +97,10 @@ func getGuests() ([]Guest, error) {
 	}
 	return guests, nil
 }
-func getHotspotUsers() ([]user, error) {
+func getHotspotUsers(item Setting) ([]user, error) {
 	flag.Parse()
 	var users []user
-	c, err := routeros.Dial(*address, *username, *password)
+	c, err := routeros.Dial(item.MikrotikIP,item.MikrotikUsername , item.MikrotikPassword)
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -125,9 +123,9 @@ func Atol(word string) string {
 	var replacer = strings.NewReplacer("İ", "I", "Ü", "U", "Ğ", "G", "Ş", "S", "Ö", "O", "Ç", "C")
 	return replacer.Replace(word)
 }
-func deleteHotspotUsers(users []user) error {
+func deleteHotspotUsers(item Setting,users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(*address, *username, *password)
+	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
 		log.Print(err.Error())
 		return err
@@ -141,9 +139,9 @@ func deleteHotspotUsers(users []user) error {
 	}
 	return nil
 }
-func createHotspotUsers(users []user) error {
+func createHotspotUsers(item Setting,users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(*address, *username, *password)
+	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername,item.MikrotikPassword)
 	if err != nil {
 		log.Print(err.Error())
 		return err
@@ -183,53 +181,60 @@ func start() {
 	log.SetOutput(f)
 	for {
 		log.Printf("Sync started...")
-		guests, err := getGuests()
-		if err == nil {
-			elog.Info(1, fmt.Sprintf("Number of guests = %d", len(guests)))
-		} else {
-			elog.Info(1, fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%s", err.Error()))
-			time.Sleep(*interval)
-			continue
+		file, err := ioutil.ReadFile(settingFilename)
+		err = json.Unmarshal([]byte(file), &config)
+		if err != nil {
+			elog.Info(1, err.Error())
 		}
-		users, err := getHotspotUsers()
-		if err == nil {
-			elog.Info(1, fmt.Sprintf("Number of hotspot users = %d", len(users)))
-		}
-		var deletelist []user
-		var delete bool
-		var deleteid int
-		for _, iuser := range users {
-			delete = true
-			for k, iguest := range guests {
-				if iguest.ID == iuser.name {
-					delete = false
-					deleteid = k
+		for _,item :=range config.Settings {
+			guests, err := getGuests(item)
+			if err == nil {
+				elog.Info(1, fmt.Sprintf("Number of guests = %d", len(guests)))
+			} else {
+				elog.Info(1, fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%s", err.Error()))
+				time.Sleep(*interval)
+				continue
+			}
+			users, err := getHotspotUsers(item)
+			if err == nil {
+				elog.Info(1, fmt.Sprintf("Number of hotspot users = %d", len(users)))
+			}
+			var deletelist []user
+			var delete bool
+			var deleteid int
+			for _, iuser := range users {
+				delete = true
+				for k, iguest := range guests {
+					if iguest.ID == iuser.name {
+						delete = false
+						deleteid = k
+					}
+				}
+				if iuser.name != "odeon" {
+					if delete {
+						deletelist = append(deletelist, iuser)
+					} else {
+						guests = append(guests[:deleteid], guests[deleteid+1:]...)
+					}
 				}
 			}
-			if iuser.name != "odeon" {
-				if delete {
-					deletelist = append(deletelist, iuser)
-				} else {
-					guests = append(guests[:deleteid], guests[deleteid+1:]...)
-				}
+			var createlist []user
+			for _, iguest := range guests {
+				createlist = append(createlist, user{name: iguest.ID, password: strconv.Itoa(iguest.BirthYear), comment: iguest.Name + " Check in & out date: " + iguest.CheckInDate.Format("Jan-02-2006") + " - " + iguest.CheckOutDate.Format("Jan-02-2006"), profile: "uprof_customer"})
 			}
+			elog.Info(1, fmt.Sprintf("How many hotspot users need to be delete ? : %d\n", len(deletelist)))
+			for _, row := range deletelist {
+				log.Printf("Comment\t,Id\n")
+				log.Printf("%s\t%s\n", row.comment, row.name)
+			}
+			elog.Info(1, fmt.Sprintf("How many hotspot users need to be inserted ? : %d\n", len(createlist)))
+			for _, row := range createlist {
+				log.Printf("Comment\t,Id\n")
+				log.Printf("%s\t%s\n", row.comment, row.name)
+			}
+			deleteHotspotUsers(item,deletelist)
+			createHotspotUsers(item,createlist)
 		}
-		var createlist []user
-		for _, iguest := range guests {
-			createlist = append(createlist, user{name: iguest.ID, password: strconv.Itoa(iguest.BirthYear), comment: iguest.Name + " Check in & out date: " + iguest.CheckInDate.Format("Jan-02-2006") + " - " + iguest.CheckOutDate.Format("Jan-02-2006"), profile: "uprof_customer"})
-		}
-		elog.Info(1, fmt.Sprintf("How many hotspot users need to be delete ? : %d\n", len(deletelist)))
-		for _, row := range deletelist {
-			log.Printf("Comment\t,Id\n")
-			log.Printf("%s\t%s\n", row.comment, row.name)
-		}
-		elog.Info(1, fmt.Sprintf("How many hotspot users need to be inserted ? : %d\n", len(createlist)))
-		for _, row := range createlist {
-			log.Printf("Comment\t,Id\n")
-			log.Printf("%s\t%s\n", row.comment, row.name)
-		}
-		deleteHotspotUsers(deletelist)
-		createHotspotUsers(createlist)
 		time.Sleep(*interval)
 	}
 }
