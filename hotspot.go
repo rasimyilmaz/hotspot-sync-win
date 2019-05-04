@@ -109,8 +109,8 @@ func getHotspotUsers(item Setting) ([]user, error) {
 	}
 
 	for _, re := range reply.Re {
-		log.Printf(re.String())
 		if re.Map["name"] != "default-trial" && re.Map["profile"] == item.CustomerProfileName {
+			log.Printf(re.String())
 			users = append(users, user{id: re.Map[".id"], name: re.Map["name"]})
 		}
 	}
