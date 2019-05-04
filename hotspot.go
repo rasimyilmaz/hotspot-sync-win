@@ -102,13 +102,13 @@ func getHotspotUsers(item Setting) ([]user, error) {
 	if err != nil {
 		return nil, err
 	}
-	reply, err := c.Run("/ip/hotspot/user/print", "?profile="+item.CustomerProfileName)
+	reply, err := c.Run("/ip/hotspot/user/print")
 	if err != nil {
 		log.Print(err)
 		return nil, err
 	}
 	for _, re := range reply.Re {
-		if re.Map["name"] != "default-trial" {
+		if (re.Map["name"] != "default-trial" && re.Map["profile"]==item.CustomerProfileName)  {
 			users = append(users, user{id: re.Map[".id"], name: re.Map["name"]})
 		}
 	}
