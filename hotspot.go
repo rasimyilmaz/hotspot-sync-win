@@ -107,8 +107,10 @@ func getHotspotUsers(item Setting) ([]user, error) {
 		log.Print(err)
 		return nil, err
 	}
+
 	for _, re := range reply.Re {
-		if (re.Map["name"] != "default-trial" && re.Map["profile"]==item.CustomerProfileName)  {
+		log.Printf(re.String())
+		if re.Map["name"] != "default-trial" && re.Map["profile"] == item.CustomerProfileName {
 			users = append(users, user{id: re.Map[".id"], name: re.Map["name"]})
 		}
 	}
@@ -199,7 +201,7 @@ func start() {
 			if err == nil {
 				log.Printf("Number of hotspot users = %d", len(users))
 			} else {
-				log.Printf("getHotspotUsers function call error : "+ err.Error())
+				log.Printf("getHotspotUsers function call error : " + err.Error())
 				continue
 			}
 			var deletelist []user
@@ -234,13 +236,13 @@ func start() {
 				log.Printf("%s\t%s\n", row.comment, row.name)
 			}
 			err = deleteHotspotUsers(item, deletelist)
-			if (err!=nil){
-				log.Print("deleteHotspotUsers function call error : "+ err.Error())
+			if err != nil {
+				log.Print("deleteHotspotUsers function call error : " + err.Error())
 				continue
 			}
 			createHotspotUsers(item, createlist)
-			if (err!=nil){
-				log.Print("createHotspotUsers function call error : "+ err.Error())
+			if err != nil {
+				log.Print("createHotspotUsers function call error : " + err.Error())
 			}
 		}
 	}
