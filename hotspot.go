@@ -39,7 +39,6 @@ type user struct {
 	name     string
 	password string
 	comment  string
-	profile  string
 }
 type Configuration struct {
 	Settings []Setting `json: "Settings"`
@@ -48,12 +47,13 @@ type Configuration struct {
 
 //Setting for application settings
 type Setting struct {
-	ServerAddress       string `json: "ServerAddress"`
-	Profile             string `json: "Profile"`
+	ServerAddress       string `json:"ServerAddress"`
+	Profile             string `json:"Profile"`
 	MikrotikAddress     string `json:"MikrotikAddress"`
 	MikrotikUsername    string `json:"MikrotikUsername"`
 	MikrotikPassword    string `json:"MikrotikPassword"`
-	CustomerProfileName string `json:"CustomerProfileName"`
+	HotspotUserProfile	string `json:"HotspotUserProfile"`
+	HotspotUserServer	string `json:"HotspotUserServer"`
 }
 
 func getGuests(item Setting) ([]Guest, error) {
@@ -109,7 +109,7 @@ func getHotspotUsers(item Setting) ([]user, error) {
 	}
 
 	for _, re := range reply.Re {
-		if re.Map["name"] != "default-trial" && re.Map["profile"] == item.CustomerProfileName {
+		if re.Map["server"] != item.HotspotUserServer && re.Map["profile"] == item.HotspotUserProfile {
 				users = append(users, user{id: re.Map[".id"], name: re.Map["name"]})
 		}
 	}
@@ -142,7 +142,7 @@ func createHotspotUsers(item Setting, users []user) error {
 		return err
 	}
 	for _, row := range users {
-		_, err := c.Run("/ip/hotspot/user/add", "=name="+row.name, "=password="+row.password, "=comment="+Atol(row.comment), "=profile="+row.profile)
+		_, err := c.Run("/ip/hotspot/user/add", "=name="+row.name, "=password="+row.password, "=comment="+Atol(row.comment), "=profile="+item.HotspotUserProfile,"=server="+item.HotspotUserServer)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func start() {
 			}
 			var createlist []user
 			for _, iguest := range guests {
-				createlist = append(createlist, user{name: iguest.ID, password: strconv.Itoa(iguest.BirthYear), comment: iguest.Name + " Check in & out date: " + iguest.CheckInDate.Format("Jan-02-2006") + " - " + iguest.CheckOutDate.Format("Jan-02-2006"), profile: "uprof_customer"})
+				createlist = append(createlist, user{name: iguest.ID, password: strconv.Itoa(iguest.BirthYear), comment: iguest.Name + " Check in & out date: " + iguest.CheckInDate.Format("Jan-02-2006") + " - " + iguest.CheckOutDate.Format("Jan-02-2006")})
 			}
 			log.Printf("How many hotspot users need to be delete ? : %d\n", len(deletelist))
 			for _, row := range deletelist {

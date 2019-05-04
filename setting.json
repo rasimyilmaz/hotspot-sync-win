@@ -6,7 +6,8 @@
             "MikrotikAddress":"192.168.10.56:8728",
             "MikrotikUsername":"admin",
             "MikrotikPassword":"78758",
-            "CustomerProfileName":"uprof_customer"
+            "HotspotUserProfile":"uprof_customer",
+            "HotspotUserServer":"hs_public"
         },
         {
             "ServerAddress": "192.168.10.250:8080",
@@ -14,7 +15,8 @@
             "MikrotikAddress":"192.168.10.45:8728",
             "MikrotikUsername":"admin",
             "MikrotikPassword":"78758",
-            "CustomerProfileName":"uprof_customer"
+            "HotspotUserProfile":"uprof_customer",
+            "HotspotUserServer":"hs_customer"
         }
     ],
     "Interval":1
