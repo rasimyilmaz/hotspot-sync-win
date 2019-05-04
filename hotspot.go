@@ -109,7 +109,7 @@ func getHotspotUsers(item Setting) ([]user, error) {
 	}
 
 	for _, re := range reply.Re {
-		if re.Map["server"] != item.HotspotUserServer && re.Map["profile"] == item.HotspotUserProfile {
+		if re.Map["server"] == item.HotspotUserServer && re.Map["profile"] == item.HotspotUserProfile {
 				users = append(users, user{id: re.Map[".id"], name: re.Map["name"]})
 		}
 	}
