@@ -4,7 +4,7 @@
             "Profile":"Aydin_Park_Hotel",
             "IP":"192.168.10.250",
             "MikrotikIP":"192.168.10.56",
-            "MikrotikUsername":"Admin",
+            "MikrotikUsername":"admin",
             "MikrotikPassword":"78758",
             "CustomerProfileName:":"uprof_customer"
         },
@@ -12,7 +12,7 @@
             "Profile":"ELKV5ODEON",
             "IP":"192.168.10.250",
             "MikrotikIP":"192.168.10.40",
-            "MikrotikUsername":"Admin",
+            "MikrotikUsername":"admin",
             "MikrotikPassword":"78758",
             "CustomerProfileName:":"uprof_customer"
         }
