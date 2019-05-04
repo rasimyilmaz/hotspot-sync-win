@@ -109,12 +109,8 @@ func getHotspotUsers(item Setting) ([]user, error) {
 	}
 
 	for _, re := range reply.Re {
-		if re.Map["name"] != "default-trial" {
-			log.Println(re.Map["profile"])
-			log.Printf("re.Map -> %s , item.CustomerProfileName -> %s , isEqual => %v", re.Map["profile"], item.CustomerProfileName, re.Map["profile"] == item.CustomerProfileName)
-			if re.Map["profile"] == item.CustomerProfileName {
+		if re.Map["name"] != "default-trial" && re.Map["profile"] == item.CustomerProfileName {
 				users = append(users, user{id: re.Map[".id"], name: re.Map["name"]})
-			}
 		}
 	}
 	return users, nil
