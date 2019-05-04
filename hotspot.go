@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -21,6 +20,7 @@ import (
 var (
 	properties      = flag.String("properties", "name", "Properties")
 	settingFilename string
+	interval = time.Minute
 	config Configuration
 )
 
@@ -105,7 +105,7 @@ func getHotspotUsers(item Setting) ([]user, error) {
 		log.Print(err)
 		return nil, err
 	}
-	reply, err := c.Run("/ip/hotspot/user/print", "?disabled=false")
+	reply, err := c.Run("/ip/hotspot/user/print", "?profile="+item.CustomerProfileName)
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -180,24 +180,31 @@ func start() {
 	defer f.Close()
 	log.SetOutput(f)
 	for {
+		elog.Info(1,"Sync started.Interval "+interval.String() + " minutes.")
 		log.Printf("Sync started...")
+		time.Sleep(interval)
 		file, err := ioutil.ReadFile(settingFilename)
-		err = json.Unmarshal([]byte(file), &config)
-		if err != nil {
-			elog.Info(1, err.Error())
+		if (err!=nil){
+			log.Printf(err.Error())
+			continue
 		}
+		err = json.Unmarshal([]byte(file), &config)
+		if (err!=nil){
+			log.Printf(err.Error())
+			continue
+		}
+		interval = time.Duration(config.Interval)*time.Minute
 		for _,item :=range config.Settings {
 			guests, err := getGuests(item)
 			if err == nil {
-				elog.Info(1, fmt.Sprintf("Number of guests = %d", len(guests)))
+				log.Printf(fmt.Sprintf("Number of guests = %d", len(guests)))
 			} else {
-				elog.Info(1, fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%s", err.Error()))
-				time.Sleep(*interval)
+				log.Printf(fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%s", err.Error()))
 				continue
 			}
 			users, err := getHotspotUsers(item)
 			if err == nil {
-				elog.Info(1, fmt.Sprintf("Number of hotspot users = %d", len(users)))
+				log.Printf("Number of hotspot users = %d", len(users))
 			}
 			var deletelist []user
 			var delete bool
@@ -210,24 +217,22 @@ func start() {
 						deleteid = k
 					}
 				}
-				if iuser.name != "odeon" {
-					if delete {
-						deletelist = append(deletelist, iuser)
-					} else {
-						guests = append(guests[:deleteid], guests[deleteid+1:]...)
-					}
+				if delete {
+					deletelist = append(deletelist, iuser)
+				} else {
+					guests = append(guests[:deleteid], guests[deleteid+1:]...)
 				}
 			}
 			var createlist []user
 			for _, iguest := range guests {
 				createlist = append(createlist, user{name: iguest.ID, password: strconv.Itoa(iguest.BirthYear), comment: iguest.Name + " Check in & out date: " + iguest.CheckInDate.Format("Jan-02-2006") + " - " + iguest.CheckOutDate.Format("Jan-02-2006"), profile: "uprof_customer"})
 			}
-			elog.Info(1, fmt.Sprintf("How many hotspot users need to be delete ? : %d\n", len(deletelist)))
+			log.Printf("How many hotspot users need to be delete ? : %d\n", len(deletelist))
 			for _, row := range deletelist {
 				log.Printf("Comment\t,Id\n")
 				log.Printf("%s\t%s\n", row.comment, row.name)
 			}
-			elog.Info(1, fmt.Sprintf("How many hotspot users need to be inserted ? : %d\n", len(createlist)))
+			log.Printf("How many hotspot users need to be inserted ? : %d\n", len(createlist))
 			for _, row := range createlist {
 				log.Printf("Comment\t,Id\n")
 				log.Printf("%s\t%s\n", row.comment, row.name)
@@ -235,7 +240,6 @@ func start() {
 			deleteHotspotUsers(item,deletelist)
 			createHotspotUsers(item,createlist)
 		}
-		time.Sleep(*interval)
 	}
 }
 

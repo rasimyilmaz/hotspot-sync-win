@@ -1,19 +1,15 @@
 {
     "Settings":[
         {
-            "ID":1,
-            "Name":"Aydın Park Otel",
             "Profile":"Aydin_Park_Hotel",
             "IP":"192.168.10.250",
-            "MikrotikIP":"192.168.10.40",
+            "MikrotikIP":"192.168.10.56",
             "MikrotikUsername":"Admin",
             "MikrotikPassword":"78758",
             "CustomerProfileName:":"uprof_customer"
         },
         {
-            "ID":2,
-            "Name":"Aydın Park Otel",
-            "Profile":"Aydin_Park_Hotel",
+            "Profile":"ELKV5ODEON",
             "IP":"192.168.10.250",
             "MikrotikIP":"192.168.10.40",
             "MikrotikUsername":"Admin",
