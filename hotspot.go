@@ -51,6 +51,7 @@ type Setting struct {
 	Profile             string `json: "Profile"`
 	IP                  string `json: "IP"`
 	MikrotikIP          string `json:"MikrotikIP"`
+	MikrotikPort		int    `json:"MikrotikPort"`
 	MikrotikUsername    string `json:"MikrotikUsername"`
 	MikrotikPassword    string `json:"MikrotikPassword"`
 	CustomerProfileName string `json:"CustomerProfileName"`
@@ -98,7 +99,7 @@ func getGuests(item Setting) ([]Guest, error) {
 func getHotspotUsers(item Setting) ([]user, error) {
 	flag.Parse()
 	var users []user
-	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikIP+":"+string(item.MikrotikPort), item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -123,7 +124,7 @@ func Atol(word string) string {
 }
 func deleteHotspotUsers(item Setting, users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikIP+":"+string(item.MikrotikPort), item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
 		log.Print(err.Error())
 		return err
@@ -139,7 +140,7 @@ func deleteHotspotUsers(item Setting, users []user) error {
 }
 func createHotspotUsers(item Setting, users []user) error {
 	flag.Parse()
-	c, err := routeros.Dial(item.MikrotikIP, item.MikrotikUsername, item.MikrotikPassword)
+	c, err := routeros.Dial(item.MikrotikIP+":"+string(item.MikrotikPort), item.MikrotikUsername, item.MikrotikPassword)
 	if err != nil {
 		log.Print(err.Error())
 		return err
@@ -197,12 +198,15 @@ func start() {
 			if err == nil {
 				log.Printf(fmt.Sprintf("Number of guests = %d", len(guests)))
 			} else {
-				log.Printf(fmt.Sprintf("Connection fail.\nCould get data from hotel api server.%s", err.Error()))
+				log.Printf(fmt.Sprintf("getGuests function call error : Connection fail.\nCould get data from hotel api server.%s", err.Error()))
 				continue
 			}
 			users, err := getHotspotUsers(item)
 			if err == nil {
 				log.Printf("Number of hotspot users = %d", len(users))
+			} else {
+				log.Printf("getHotspotUsers function call error : "+ err.Error())
+				continue
 			}
 			var deletelist []user
 			var delete bool
@@ -235,8 +239,15 @@ func start() {
 				log.Printf("Comment\t,Id\n")
 				log.Printf("%s\t%s\n", row.comment, row.name)
 			}
-			deleteHotspotUsers(item, deletelist)
+			err = deleteHotspotUsers(item, deletelist)
+			if (err!=nil){
+				log.Print("deleteHotspotUsers function call error : "+ err.Error())
+				continue
+			}
 			createHotspotUsers(item, createlist)
+			if (err!=nil){
+				log.Print("createHotspotUsers function call error : "+ err.Error())
+			}
 		}
 	}
 }
